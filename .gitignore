@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Mac stuff
+*DS_Store
+
+# Virtual environments
+.venv
+
+# uv stuff
+uv.lock
+.python-version
+
+# don't upload data!
+*.png
+*.pdf
+*.npy

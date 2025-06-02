@@ -1,0 +1,22 @@
+[project]
+name = "bri_data_wrangle"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "matplotlib>=3.9.4",
+    "numpy>=2.0.2",
+    "pandas>=2.2.3",
+    #    "pynapple>=0.8.5",
+    "pynwb>=3.0.0",
+    "scipy>=1.15.2",
+    "spatial-manifolds",
+]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.uv.sources]
+spatial-manifolds = { path = "../../../../../fromgit/spatial-manifolds", editable = true }
