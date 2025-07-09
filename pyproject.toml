@@ -19,4 +19,4 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.uv.sources]
-spatial-manifolds = { path = "../../../../../fromgit/spatial-manifolds", editable = true }
+spatial-manifolds = { path = "../spatial-manifolds", editable = true }

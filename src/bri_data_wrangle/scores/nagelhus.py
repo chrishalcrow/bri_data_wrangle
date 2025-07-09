@@ -68,17 +68,23 @@ def compute_dE(x0, y0, decay, rate_map, num_mask):
 
     return dE
 
-def grad_flow(trial_parameter, rate_map, num_mask, dt=0.01):
+def grad_flow(trial_parameter, rate_map, num_mask, dt=0.01, object_position=None, radius=None):
 
     parameters = trial_parameter
 
     old_pearson_score = compute_E(parameters[0], parameters[1], parameters[2], rate_map, num_mask)
     print(f"PS: {old_pearson_score}")
+
+    if object_position is not None:
+        object_position_in_bins = object_position/100*40
     
     for a in range(10000):
 
         dE = compute_dE(parameters[0], parameters[1], parameters[2], rate_map, num_mask)
         parameters += dt*dE
+
+        if (radius is not None) and np.sqrt(np.pow(parameters[0] - object_position_in_bins[0][0], 2) + np.pow(parameters[1] - object_position_in_bins[0][1], 2)) > radius:
+            break 
 
     new_pearson_score = compute_E(parameters[0], parameters[1], parameters[2], rate_map, num_mask)
     print(f"PS: {new_pearson_score}")
@@ -86,11 +92,13 @@ def grad_flow(trial_parameter, rate_map, num_mask, dt=0.01):
     return parameters, new_pearson_score
 
 
-def find_best_template(rate_map, x_range, y_range, decay_range=np.arange(0.01, 0.12, 0.01), method="grad_flow"):
+def find_best_template(rate_map, x_range, y_range, decay_range=np.arange(0.01, 0.12, 0.01), method="grad_flow", object_position=None, radius=None):
 
     num_mask = get_num_mask(rate_map)
 
     x_len, y_len = np.shape(rate_map)
+    if object_position is not None:
+        object_position_in_bins = object_position/100*x_len
 
     if method == "grad_flow":
         
@@ -108,6 +116,8 @@ def find_best_template(rate_map, x_range, y_range, decay_range=np.arange(0.01, 0
         for x0 in x_range:
             for y0 in y_range:
                 for decay in decay_range:
+                    if (object_position is not None) and np.sqrt(np.pow(x0 - object_position_in_bins[0][0], 2) + np.pow(y0 - object_position_in_bins[0][1], 2)) > radius:
+                        break
                     possible_parameters.append([x0, y0, decay])
 
         best_pearson_correlation = 0
@@ -126,17 +136,18 @@ def find_best_template(rate_map, x_range, y_range, decay_range=np.arange(0.01, 0
 
 def get_object_position(session_datapath):
 
-    object_csv_path_list = list(session_datapath.glob('*_object.csv'))
+    object_csv_path_list_with_hidden = list(session_datapath.glob('*_object.csv'))
+    object_csv_path_list = [path for path in object_csv_path_list_with_hidden if path.name[0] != '.']
 
     if len(object_csv_path_list) == 0:
 
-        warn(f"Cannot find object filepath in {session_datapath}. Setting object position to (0,0).")
+        #warn(f"Cannot find object filepath in {session_datapath}. Setting object position to (nan,nan).")
 
-        obj_x = 0
-        obj_y = 0
+        return [np.nan, np.nan]
 
     object_csv_path = object_csv_path_list[0]
 
+    print("object_csv_path: ", object_csv_path)
     object_df = pd.read_csv(object_csv_path, header=None)
 
     obj_xs = np.array([float(obj_loc.split(" ")[0]) for obj_loc in object_df[0]])
@@ -155,6 +166,8 @@ def compute_nagelhus(
     session,
     session_type,
     cluster_spikes,
+    object_position,
+    radius,
 ):
     
     num_bins = (40,40)
@@ -169,8 +182,8 @@ def compute_nagelhus(
     
     filtered_tc = gaussian_filter_nan(tc, sigma=[1.5, 1.5])
     
-    best_parameters = find_best_template(filtered_tc, num_bins[0], num_bins[1], method="scan")
-    tweaked_parameters, new_pearson_score = grad_flow(best_parameters, filtered_tc, get_num_mask(tc))
+    best_parameters = find_best_template(filtered_tc, num_bins[0], num_bins[1], method="scan", object_position=object_position, radius=radius)
+    tweaked_parameters, new_pearson_score = grad_flow(best_parameters, filtered_tc, get_num_mask(tc), object_position=object_position, radius=radius)
     template = make_gaussian_template(tweaked_parameters[0], tweaked_parameters[1], tweaked_parameters[2], 40, 40)
 
     return {
